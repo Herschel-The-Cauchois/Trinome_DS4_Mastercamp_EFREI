@@ -25,12 +25,12 @@ class MinMaxTree:
         if self.predecessor == None: # Root node case
             succ = self.game.actions(self.root_player) # In the successor iterations, the game turns will of course be done by the other player
             for i in range(0, len(succ)): # i iteration used because it's better for recursive successor generation
-                self.successors.append(MinMaxTree(self.root_player, "min" if self.state == "max" else "max",Morpion(succ[i], 0 if self.game.player == 1 else 1), self, [])) # Successor is a node of other state with a game whose turn is for the other player following the possible actions done
+                self.successors.append(MinMaxTree(self.root_player, "min" if self.state == "max" else "max",Game(succ[i], 0 if self.game.player == 1 else 1), self, [])) # Successor is a node of other state with a game whose turn is for the other player following the possible actions done
                 self.successors[i].generate_successors()
         elif self.game.Utility(self.game.player) == None: # Is the game not finished ? elif is necessary because after many test, it executed both conditions at the started and ruined the minimax
             succ = self.game.actions(0 if self.game.player == 1 else 1) # In the successor iterations, the game turns will of course be done by the other player
             for i in range(0, len(succ)): # i iteration used because it's better for recursive successor generation
-                self.successors.append(MinMaxTree(self.root_player, "min" if self.state == "max" else "max",Morpion(succ[i], 0 if self.game.player == 1 else 1), self, [])) # Successor is a node of other state with a game whose turn is for the other player following the possible actions done
+                self.successors.append(MinMaxTree(self.root_player, "min" if self.state == "max" else "max",Game(succ[i], 0 if self.game.player == 1 else 1), self, [])) # Successor is a node of other state with a game whose turn is for the other player following the possible actions done
                 self.successors[i].generate_successors()
                 
     def max_value(self, alpha = None, beta = None): # if one of alpha or beta is missing, classic minimax mode
