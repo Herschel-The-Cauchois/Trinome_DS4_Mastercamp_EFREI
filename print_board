@@ -12,9 +12,9 @@ def print_board(board):
         VIDE:"0"
     }
     print()
-        for lignes in board:
-          print(" ".join(symbols[cell] for cell in lignes))
+    for lignes in board:
+        print(" ".join(symbols[cell] for cell in lignes))
 
         print(" ".join(str(i % 10) for i in range(COLS)))
-       print()
+    print()
        
