@@ -1,0 +1,10 @@
+def Terminal_Test(board):
+    if check_winner(board) != 0:
+        return True 
+for row in range(ROWS) :
+  for col in range(COLS):
+      if board[row][col]==EMPTY :
+          return False 
+
+
+return True 
