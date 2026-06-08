@@ -3,18 +3,13 @@ import math
 ROWS = 6
 COLS = 12
 AI = 1
-OPPONENT = -1
+ADV = -1
 EMPTY = 0
-
-MAX_DEPTH = 4
-TIME_LIMIT = 9.5
-
-
 def print_board(board):
 
     symbols = {
         AI: "X",
-        OPPONENT: "O",
+        ADV: "O",
         EMPTY: "."
     }
 
