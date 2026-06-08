@@ -28,30 +28,49 @@ class MinMaxTree:
                 self.successors.append(MinMaxTree(self.root_player, "min" if self.state == "max" else "max",Morpion(succ[i], 0 if self.game.player == 1 else 1), self, [])) # Successor is a node of other state with a game whose turn is for the other player following the possible actions done
                 self.successors[i].generate_successors()
                 
-    def max_value(self):
+    def max_value(self, alpha = None, beta = None): # if one of alpha or beta is missing, classic minimax mode
         if self.game.Utility(0) != None: # Is the game finished ?
             self.value = self.game.Utility(self.root_player)
             return self.value
         self.value = float("-inf")
         for i in range(0, len(self.successors)):
             self.value = max(self.value, self.successors[i].min_value())
+            if alpha != None and beta != None:
+                if self.value <= alpha:
+                    return self.value
+                alpha = max(alpha, self.value)
+                print("alpha : "+ str(alpha))
         return self.value
     
-    def min_value(self):
+    def min_value(self, alpha = None, beta = None): # if one of alpha or beta is missing, classic minimax mode
         if self.game.Utility(0) != None: # Is the game finished ?
             self.value = self.game.Utility(self.root_player)
             return self.value
         self.value = float("inf")
         for i in range(0, len(self.successors)):
             self.value = min(self.value, self.successors[i].max_value())
+            if alpha != None and beta != None:
+                if self.value <= alpha:
+                    return self.value
+                beta = min(beta, self.value)
+                print("beta : " + str(beta))
         return self.value
     
-    def minimax_decision(self):
+    def minimax_decision(self, isAlphaBeta):
         decision_index = 0
-        for i in range(0, len(self.successors)):
-            print(self.successors[decision_index].value)
-            if i == 0:
-                self.successors[i].min_value()
-            elif self.successors[decision_index].value < self.successors[i].min_value():
-                decision_index = i
-        return self.successors[decision_index].game.grid # returns grid of next action to take by player x
+        if isAlphaBeta:
+            for i in range(0, len(self.successors)):
+                print(self.successors[decision_index].value)
+                if i == 0:
+                    self.successors[i].MinVal(self.alpha, self.beta)
+                elif self.successors[decision_index].value < self.successors[i].MinVal(self.alpha, self.beta):
+                    decision_index = i
+            return self.successors[decision_index].game.grid # returns grid of next action to take by player x
+        else:
+            for i in range(0, len(self.successors)):
+                print(self.successors[decision_index].value)
+                if i == 0:
+                    self.successors[i].MinVal()
+                elif self.successors[decision_index].value < self.successors[i].MinVal():
+                    decision_index = i
+            return self.successors[decision_index].game.grid # returns grid of next action to take by player x
