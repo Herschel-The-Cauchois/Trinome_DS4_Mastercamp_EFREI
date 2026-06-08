@@ -182,7 +182,9 @@ def IA_Decision(state):
     return tree.minimax_decision()
 
 def Terminal_test(state):
-    return False
+    game = Game(state)
+    return game.Terminal_test()
+    
 
 def main():
     start = int(input("Qui commence ? [1=IA, -1=Humain]: "))
