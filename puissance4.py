@@ -25,12 +25,12 @@ class MinMaxTree:
         if self.predecessor == None: # Root node case
             succ = self.game.actions(self.root_player) # In the successor iterations, the game turns will of course be done by the other player
             for i in range(0, len(succ)): # i iteration used because it's better for recursive successor generation
-                self.successors.append(MinMaxTree(self.root_player, "min" if self.state == "max" else "max",Game(succ[i], 0 if self.game.player == 1 else 1), self, [])) # Successor is a node of other state with a game whose turn is for the other player following the possible actions done
+                self.successors.append(MinMaxTree(self.root_player, "min" if self.state == "max" else "max",Morpion(succ[i], 0 if self.game.player == 1 else 1), self, [])) # Successor is a node of other state with a game whose turn is for the other player following the possible actions done
                 self.successors[i].generate_successors()
         elif self.game.Utility(self.game.player) == None: # Is the game not finished ? elif is necessary because after many test, it executed both conditions at the started and ruined the minimax
             succ = self.game.actions(0 if self.game.player == 1 else 1) # In the successor iterations, the game turns will of course be done by the other player
             for i in range(0, len(succ)): # i iteration used because it's better for recursive successor generation
-                self.successors.append(MinMaxTree(self.root_player, "min" if self.state == "max" else "max",Game(succ[i], 0 if self.game.player == 1 else 1), self, [])) # Successor is a node of other state with a game whose turn is for the other player following the possible actions done
+                self.successors.append(MinMaxTree(self.root_player, "min" if self.state == "max" else "max",Morpion(succ[i], 0 if self.game.player == 1 else 1), self, [])) # Successor is a node of other state with a game whose turn is for the other player following the possible actions done
                 self.successors[i].generate_successors()
                 
     def max_value(self, alpha = None, beta = None): # if one of alpha or beta is missing, classic minimax mode
@@ -79,3 +79,128 @@ class MinMaxTree:
                 elif self.successors[decision_index].value < self.successors[i].MinVal():
                     decision_index = i
             return self.successors[decision_index].game.grid # returns grid of next action to take by player x
+        
+class Game:
+    def __init__(self, grid=None, player=IA):
+        if grid == None:
+            self.grid = [[VIDE for _ in range(COLS)] for _ in range(LIGNES)]
+        else:
+            self.grid = grid
+
+        self.player = player
+
+    def actions(self, player):
+        successors = []
+        for col in range(COLS):
+            if self.grid[0][col] != VIDE:
+                continue
+            new_grid = copy.deepcopy(self.grid)
+            row = 0
+            while row < LIGNES and new_grid[row][col] == VIDE:
+                row += 1
+            row -= 1
+            new_grid[row][col] = player
+            successors.append(new_grid)
+        return successors
+
+    def Terminal_test(self):
+        return self.Utility(IA) is not None
+    
+    def play(self, player, col):
+        row = 0
+        while row < LIGNES and self.grid[row][col] == VIDE:
+            row += 1
+        row -= 1
+        self.grid[row][col] = player
+
+    def winner(self):
+        g = self.grid
+        for r in range(LIGNES):
+            for c in range(COLS):
+                p = g[r][c]
+                if p == VIDE:
+                    continue
+                # horizontal
+                if c <= COLS - 4:
+                    if all(g[r][c+i] == p for i in range(4)):
+                        return p
+                # vertical
+                if r <= LIGNES - 4:
+                    if all(g[r+i][c] == p for i in range(4)):
+                        return p
+                # diagonale \
+                if r <= LIGNES - 4 and c <= COLS - 4:
+                    if all(g[r+i][c+i] == p for i in range(4)):
+                        return p
+                # diagonale /
+                if r >= 3 and c <= COLS - 4:
+                    if all(g[r-i][c+i] == p for i in range(4)):
+                        return p
+        return None
+
+    def Utility(self, root_player):
+        winner = self.winner()
+        if winner == root_player:
+            return 1
+        if winner == -root_player:
+            return -1
+        full = True
+        for col in range(COLS):
+            if self.grid[0][col] == VIDE:
+                full = False
+                break
+        if full:
+            return 0
+        return None
+    
+
+def print_board(board):
+    symbols = {
+        IA: "X" ,
+        ADV:"0" ,
+        VIDE:" "
+    }
+    print()
+    for lignes in board:
+        print(" ".join(symbols[cell] for cell in lignes))
+
+        # print(" ".join(str(i % 10) for i in range(COLS)))
+    print() 
+
+def IA_Decision(state):
+    root_game = Game(state, IA)
+    tree = MinMaxTree(
+        rootp=IA,
+        state="max",
+        game=root_game,
+        pred=None,
+        succ=[]
+    )
+
+    tree.generate_successors()
+
+    return tree.minimax_decision()
+
+def Terminal_test(state):
+    return False
+
+def main():
+    start = int(input("Qui commence ? [1=IA, -1=Humain]: "))
+    game = Game()
+    current_player = 1 if start == 1 else -1
+
+    while not game.Terminal_test():
+        if current_player == 1:
+            col = IA_Decision(game.grid)
+        else:
+            col = int(input("Entrez une colonne [0-11]: "))
+        game.play(current_player, col)
+        print_board(game.state)
+        current_player = 1 if current_player == -1 else -1
+
+        
+
+
+if __name__ == "__main__":
+    main()
+       
