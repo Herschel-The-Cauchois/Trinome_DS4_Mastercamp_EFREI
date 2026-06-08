@@ -1,0 +1,20 @@
+import math
+
+COLS=12
+LIGNES=6
+IA=1
+ADV=-1
+VIDE=0
+def print_board(board):
+    symbols = {
+        IA: "X" ,
+        ADV:"0" ,
+        VIDE:"0"
+    }
+    print()
+        for lignes in board:
+          print(" ".join(symbols[cell] for cell in lignes))
+
+        print(" ".join(str(i % 10) for i in range(COLS)))
+       print()
+       
