@@ -52,35 +52,50 @@ for elem in cve_list:
 unique_cves = list(set(unique_cves)) # Conversion to only retrieve unique ids, better for discussing with CVE API
 
 counter = 0
-cve_data = {"id":[], "description":[], "cvss":[], "cwe":[], "cwe_desc":[], "affected":[]} # All info about the CVEs we want to have it handy
+cve_data = {"id":[], "description":[], "cvss":[], "cwe":[], "cwe_desc":[], "affected":[], "epss": []} # All info about the CVEs we want to have it handy
 # /!\ affected will contain list of dictionaries with vendor, product name and versions keys, datatype to manage in df creation
 for elem in unique_cves:
     response = rq.get(f"https://cveawg.mitre.org/api/cve/{elem}")
     try:
         data = response.json()
-        cve_data["description"].append(data["containers"]["cna"]["descriptions"][0]["value"])
-        cvss_flag = False # Signals if the value was found in any retrieval attempt
         try:
-            cve_data["cvss"].append(data["containers"]["cna"]["metrics"][0]["cvssV3_0"]["baseScore"])
-            cvss_flag = True
-        except KeyError:
-            print("CVSS for " + elem + " could not be retrieved at _0, trying at _1")
-        if not cvss_flag:
+            cve_data["description"].append(data["containers"]["cna"]["descriptions"][0]["value"])
+            cve_data["id"].append(elem) # This is done here to prevent phantom ids without any attached data to create an offset in the records
+            cvss_flag = False # Signals if the value was found in any retrieval attempt
             try:
-                cve_data["cvss"].append(data["containers"]["cna"]["metrics"][0]["cvssV3_1"]["baseScore"])
+                cve_data["cvss"].append(data["containers"]["cna"]["metrics"][0]["cvssV3_0"]["baseScore"])
                 cvss_flag = True
             except KeyError:
-                print("CVSS for " + elem + " could not be retrieved at _1, putting empty value")
-                cve_data["cvss"].append("Unavailable")
-        problemtype = data["containers"]["cna"].get("problemTypes", {})
-        if problemtype and "descriptions" in problemtype[0]:
-            cve_data["cwe"] = problemtype[0]["descriptions"][0].get("cweId", "Unavailable")
-            cve_data["cwe_desc"] = problemtype[0]["descriptions"][0].get("description", "Unavailable")
-            
-        # product to do
+                print("CVSS for " + elem + " could not be retrieved at _0, trying at _1")
+            if not cvss_flag:
+                try:
+                    cve_data["cvss"].append(data["containers"]["cna"]["metrics"][0]["cvssV3_1"]["baseScore"])
+                    cvss_flag = True
+                except KeyError:
+                    print("CVSS for " + elem + " could not be retrieved at _1, putting empty value")
+                    cve_data["cvss"].append("Unavailable")
+            problemtype = data["containers"]["cna"].get("problemTypes", {})
+            if problemtype and "descriptions" in problemtype[0]:
+                cve_data["cwe"].append(problemtype[0]["descriptions"][0].get("cweId", "Unavailable"))
+                cve_data["cwe_desc"].append(problemtype[0]["descriptions"][0].get("description", "Unavailable"))
+            else:
+                cve_data["cwe"].append("Unavailable")
+                cve_data["cwe_desc"].append("Unavailable")
+            try:
+                affected = data["containers"]["cna"]["affected"]
+                dict_affect = {"vendors": [], "product_names": [], "versions": []}
+                for product in affected:
+                    dict_affect["vendors"].append(product["vendor"])
+                    dict_affect["product_names"].append(product["product"])
+                    versions = [v["version"] for v in product["versions"] if v["status"] == "affected"]
+                    dict_affect["versions"].append(', '.join(versions))
+                cve_data["affected"].append(dict_affect)
+            except KeyError:
+                cve_data["affected"].append("Unavailable")
+        except KeyError:
+            print("No data for " + elem)
     except rq.JSONDecodeError:
         print("Adress " + f"https://cveawg.mitre.org/api/cve/{elem}" + " returns malformed JSON or is not available")
-    cve_data["id"].append(elem) # This is done last to prevent phantom ids without any attached data to create an offset in the records
     sleep(1)
     count += 1
 print("Final dic obtained in {} seconds: ".format(count), cve_data)
