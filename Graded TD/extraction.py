@@ -97,8 +97,23 @@ for elem in unique_cves:
     except rq.JSONDecodeError:
         print("Adress " + f"https://cveawg.mitre.org/api/cve/{elem}" + " returns malformed JSON or is not available")
     sleep(1)
-    count += 1
-print("Final dic obtained in {} seconds: ".format(count), cve_data)
-        
+    counter += 1
+print("CVE dic obtained in {} seconds: ".format(counter), cve_data)
+
+# Connecting to that sweet EPSS API time
+counter = 0
+for elem in unique_cves:
+    response = rq.get(f"https://api.first.org/data/v1/epss?cve={elem}")
+    try:
+        data = response.json()
+        epss_data = data.get("data", [])
+        if epss_data:
+            cve_data["epss"].append(epss_data[0]["epss"])
+        else:
+            cve_data["epss"].append("Unavailable")
+    except rq.JSONDecodeError:
+        cve_data["epss"].append("Unavailable")
+    counter += 1
+print("Final dic obtained in {} seconds: ".format(counter), cve_data)
     
 # Objective : produce a dataframe that will be encoded as a csv file for other parts
