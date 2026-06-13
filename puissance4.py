@@ -249,6 +249,7 @@ def Terminal_test(state):
     game = Game(state)
     return game.Terminal_test()
 
+
 def main():
     start = int(input("Qui commence ? [1=IA, -1=Humain]: "))
     game = Game()
