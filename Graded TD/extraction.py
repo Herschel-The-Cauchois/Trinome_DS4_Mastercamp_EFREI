@@ -9,12 +9,14 @@ Created on Thu Jun 11 09:48:34 2026
 import re as re
 import feedparser as fp
 import requests as rq
-from time import sleep, time
+from time import sleep, time, strftime, localtime
+from numpy import nan
 import pandas as pd
 url = "https://www.cert.ssi.gouv.fr/feed/"
 rss_feed = fp.parse(url)
+print(strftime("%Y-%m-%d_%H:%M:%S", localtime()))
 
-feed_extracted = {"id":[], "titles": [], "desc": [], "links": [], "published": []} # Will hold lists of retrieved links to advices and other relevant info
+feed_extracted = {"id":[], "type":[], "titles": [], "desc": [], "links": [], "published": []} # Will hold lists of retrieved links to advices and other relevant info
 global_clock = time()
 for entry in rss_feed.entries:
     feed_extracted["id"].append(entry.id)
@@ -22,6 +24,7 @@ for entry in rss_feed.entries:
     feed_extracted["desc"].append(entry.description)
     feed_extracted["published"].append(entry.published)
     feed_extracted["links"].append(entry.link)
+    feed_extracted["type"].append("Alerte" if "alerte" in feed_extracted["links"] else "Avis")
     sleep(0.1) # Rate limit, short due to 40 element limit in those feeds
 rss_clock_out = time()
 print("ANSSI RSS feed extracted in {} seconds.".format(rss_clock_out - global_clock))
@@ -98,7 +101,7 @@ for idx, elem in enumerate(unique_cves):
             print("No data for " + elem)
     except rq.JSONDecodeError:
         print("Adress " + f"https://cveawg.mitre.org/api/cve/{elem}" + " returns malformed JSON or is not available")
-    sleep(0.3) # Rate Limiting increased a little to prevent server closure but still small due to massive amounts of CVEs
+    sleep(0.2) # Rate Limiting increased a little to prevent server closure but still small due to massive amounts of CVEs
 cve_data_clock_out = time()
 print("CVE dic obtained in {} seconds.".format(cve_data_clock_out - cve_data_clock_in))
 
@@ -115,19 +118,20 @@ for elem in unique_cves:
             cve_data["epss"].append("Unavailable")
     except rq.JSONDecodeError:
         cve_data["epss"].append("Unavailable")
-    sleep(0.3)
+    sleep(0.2)
 epss_clock_out = time()
 print("Final dic obtained in {} seconds.".format(epss_clock_out - epss_clock_in))
 
 convertible_clock_in = time()
-convertible = {"ANSSI ID":[], "Title": [], "Description": [], "Bulletin Link": [], "Published": [], "CVE":[], "CVE Description":[], "CVSS":[], "Severity": [], "CWE":[], "CWE Description":[], "EPSS": [], "Vendors": [], "Products": [], "Versions": []} # Behold, the adhoc dictionary merger
-for i in range(len(feed_extracted["titles"])):
-    for j in range(len(cve_list[i])):
+convertible = {"ANSSI ID":[], "Title": [], "Type": [], "Description": [], "Bulletin Link": [], "Published": [], "CVE":[], "CVE Description":[], "CVSS":[], "Severity": [], "CWE":[], "CWE Description":[], "EPSS": [], "Vendors": [], "Products": [], "Versions": []} # Behold, the adhoc dictionary merger
+for i in range(len(feed_extracted["titles"])): # For each alert
+    for j in range(len(cve_list[i])): # For each cve tied to alert
         convertible["ANSSI ID"].append(feed_extracted["id"][i])
         convertible["Title"].append(feed_extracted["titles"][i])
         convertible["Description"].append(feed_extracted["desc"][i])
         convertible["Bulletin Link"].append(feed_extracted["links"][i])
         convertible["Published"].append(feed_extracted["published"][i])
+        convertible["Type"].append(feed_extracted["type"][i])
         for k in range(len(cve_data["id"])):
             if cve_data["id"][k] == cve_list[i][j]:
                 convertible["CVE"].append(cve_data["id"][k])
@@ -147,14 +151,42 @@ for i in range(len(feed_extracted["titles"])):
                 convertible["CWE"].append(cve_data["cwe"][k])
                 convertible["CWE Description"].append(cve_data["cwe_desc"][k])
                 convertible["EPSS"].append(cve_data["epss"][k])
-# dinner time, so basically for all cve_list sublist element create new entry with alert info corresponding to ith element of cve_list + info about jth contained CVE
+                if cve_data["affected"][k] != "Unavailable":
+                    convertible["Vendors"].append(", ".join(cve_data["affected"][k]["vendors"]))
+                    convertible["Products"].append(", ".join(cve_data["affected"][k]["product_names"]))
+                    convertible["Versions"].append(" | ".join(cve_data["affected"][k]["versions"]))
+                else:
+                    convertible["Vendors"].append("Unavailable")
+                    convertible["Products"].append("Unavailable")
+                    convertible["Versions"].append("Unavailable")
 convertible_clock_out = time()
 print("Convertible dictionary obtained in {} seconds".format(convertible_clock_out - convertible_clock_in))
+
 for key in convertible.keys():
     print("Length of {} : {}".format(key,len(convertible[key])))
+if len(convertible["Title"]) > len(convertible["CVE"]): # compensation for strange phenomenon of missing CVEs
+    print("Compensation for {} items".format(len(convertible["Title"]) - len(convertible["CVE"])))
+    for i in range(len(convertible["Title"]) - len(convertible["CVE"])):
+        convertible["CVE"].append("Unavailable")
+        convertible["CVE Description"].append("Unavailable")
+        convertible["CVSS"].append("Unavailable")
+        convertible["CWE"].append("Unavailable")
+        convertible["CWE Description"].append("Unavailable")
+        convertible["EPSS"].append("Unavailable")
+        convertible["Vendors"].append("Unavailable")
+        convertible["Products"].append("Unavailable")
+        convertible["Versions"].append("Unavailable")
+        convertible["Severity"].append("Unavailable")
+for key in convertible.keys():
+    print("Length of {} : {}".format(key,len(convertible[key])))
+
 final_df = pd.DataFrame(convertible) # Don't forget to replace Unavailable by NaNs !!
+final_df["CVSS"].replace("Unavailable", nan)
+final_df["EPSS"].replace("Unavailable", nan)
 print(final_df)
+final_df.to_csv("ANSSIAlertsDataHere_{}_capture.csv".format(strftime("%Y-%m-%d_%H-%M-%S", localtime())), index=False, sep=";")
 global_clock_out = time()
 print("Program execution completed in {} seconds.".format(global_clock_out - global_clock))
 # Objective : produce a dataframe that will be encoded as a csv file for other parts
 # at the end prints should only keep time information and confirmation of file creation, data display is only for debugging
+# use ; separator
