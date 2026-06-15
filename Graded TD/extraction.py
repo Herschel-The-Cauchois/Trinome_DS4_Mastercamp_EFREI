@@ -24,7 +24,7 @@ for entry in rss_feed.entries:
     feed_extracted["desc"].append(entry.description)
     feed_extracted["published"].append(entry.published)
     feed_extracted["links"].append(entry.link)
-    feed_extracted["type"].append("Alerte" if "alerte" in feed_extracted["links"] else "Avis")
+    feed_extracted["type"].append("Alerte" if "alerte" in entry.link else "Avis")
     sleep(0.1) # Rate limit, short due to 40 element limit in those feeds
 rss_clock_out = time()
 print("ANSSI RSS feed extracted in {} seconds.".format(rss_clock_out - global_clock))
