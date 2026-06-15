@@ -9,7 +9,7 @@ Created on Thu Jun 11 09:48:34 2026
 import re as re
 import feedparser as fp
 import requests as rq
-from time import sleep, time, strftime, localtime
+from time import sleep, time, strftime, localtime # Nous récupérons peu à peu les alertes du jour, mais le processus prend 10 min au total.
 from numpy import nan
 import pandas as pd
 url = "https://www.cert.ssi.gouv.fr/feed/"
@@ -39,6 +39,7 @@ for link in feed_extracted["links"]:
         ref_cves.append(list(data["cves"]))
     except rq.JSONDecodeError: # Sometimes returns no decodable JSON, error handling prevents it from blocking it altogether
         print("Adress " + link + " returns malformed JSON or is not available")
+        ref_cves.append([]) # empty list to prevent dephasing downstream, risking to assign wrong entries to cves and have out of bound indexes
     sleep(0.1) # Rate limit
 cve_collect_clock_out = time()
 print("CVE listing extracted in {} seconds.".format(cve_collect_clock_out - cve_collect_clock_in))
@@ -48,6 +49,7 @@ cve_pattern = r"CVE-\d{4}-\d{4,7}"
 cve_list = []
 for elem in ref_cves: # Should follow same pattern as above ? only changes what's inside the list
     cve_list.append(list(set(re.findall(cve_pattern, str(elem)))))
+print("List of CVEs per entry of length {} compared to {} RSS entries".format(len(cve_list), len(feed_extracted["titles"])))
 
 unique_cves = []
 for elem in cve_list:
